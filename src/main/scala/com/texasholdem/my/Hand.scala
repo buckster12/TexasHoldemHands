@@ -72,7 +72,7 @@ object Hand extends App {
     }
 
     println("findBestCards...");
-    findBestCards(input)
+    findTheBestCombination(input)
 
     //    println(s"checking Strength of string: ${input}")
 
@@ -110,6 +110,10 @@ object Hand extends App {
     list.values.exists(_ == 4)
   }
 
+  /*
+  Method gets all cards from a string, for example from a string: KcAc4cJc9c
+  it returns: K A 4 J 9
+   */
   def parseCards(input: String): IndexedSeq[Char] = {
     for (i <- 0 until input.length if i % 2 == 0) yield input.charAt(i)
   }
@@ -122,18 +126,58 @@ object Hand extends App {
     println(msg)
   }
 
-  def findBestCards(allCards: String): String = {
+  /*
+  The method create all possible combinations,
+  then compare all of them by getting a score,
+  and return the best one
+   */
+  def findTheBestCombination(allCards: String): String = {
+    // split cards to array
     val cards = for (i <- 0 until allCards.length if i % 2 == 0) yield allCards.charAt(i).toString + allCards.charAt(i + 1).toString
+    // create an array with all possible combinations
     val uniqueCombinations = cards.combinations(5).toList
+
+    // init null variables to save the best combination
+    var bestCombinationScore: Int = 0
+    var bestCombination: String = null
+
+    // loop all combinations and search for the best one by its score
     for (comb <- uniqueCombinations) {
       val combinationString = comb.mkString
+      val combinationScore = getCombinationScore(combinationString)
+
+      // compare next combination with previously saved best combination
+      if (combinationScore > bestCombination) {
+        bestCombination = combinationString
+        bestCombinationScore = combinationScore
+      }
     }
-    null
+    bestCombination
   }
 
-  def getHighCard(handCards: String): String {
+  def getCombinationScore(cardsString: String): Int = {
+    0
+  }
 
-    null
+  // I think I may be useful for kicker but not sure yet
+  def getTheHighestCard(handCards: String): String = {
+    val cards = parseCards(handCards)
+    println(cards)
+    for (card <- cards) println(s"${card} = ${getScoreOfCard(card.toString)}")
+    ""
+  }
+
+  /*
+  Method return a card's integer value for comparing possibility
+   */
+  def getScoreOfCard(card: String): Int = {
+    var value = 0
+    if (card == "J") value = 11
+    else if (card == "Q") value = 13
+    else if (card == "K") value = 14
+    else if (card == "A") value = 15
+    else value = card.toInt
+    value
   }
 
 }
