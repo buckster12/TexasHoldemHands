@@ -131,4 +131,9 @@ object Hand extends App {
     null
   }
 
+  def getHighCard(handCards: String): String {
+
+    null
+  }
+
 }
