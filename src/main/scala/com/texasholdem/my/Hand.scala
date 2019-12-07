@@ -71,13 +71,16 @@ object Hand extends App {
       return null
     }
 
-    println(s"checking Strength of string: ${input}")
+    println("findBestCards...");
+    findBestCards(input)
 
-    val isFlash = checkFlush(input)
-    println("Flash: " + isFlash)
+    //    println(s"checking Strength of string: ${input}")
 
-    val isFourOfKind = checkFourOfKind(input)
-    println("FourOfKind: " + isFourOfKind)
+    //    val isFlash = checkFlush(input)
+    //    println("Flash: " + isFlash)
+
+    //    val isFourOfKind = checkFourOfKind(input)
+    //    println("FourOfKind: " + isFourOfKind)
 
     /*
     val cards = input.grouped(2).toList
@@ -117,6 +120,15 @@ object Hand extends App {
 
   def error(msg: String) {
     println(msg)
+  }
+
+  def findBestCards(allCards: String): String = {
+    val cards = for (i <- 0 until allCards.length if i % 2 == 0) yield allCards.charAt(i).toString + allCards.charAt(i + 1).toString
+    val uniqueCombinations = cards.combinations(5).toList
+    for (comb <- uniqueCombinations) {
+      val combinationString = comb.mkString
+    }
+    null
   }
 
 }
