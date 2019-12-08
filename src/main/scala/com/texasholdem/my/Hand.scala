@@ -5,22 +5,26 @@ import scala.io.StdIn
 
 object Hand extends App {
 
-  // Init constants to convert J,Q,K,A to Integer equivalent
-  val CARD_J = 10
-  val CARD_Q = 11
-  val CARD_K = 12
-  val CARD_A = 13
+  // Init constants to convert T,J,Q,K,A to Integer equivalent
+  val CARD_T = 10
+  val CARD_J = 11
+  val CARD_Q = 12
+  val CARD_K = 13
+  val CARD_A = 14
 
   //  val input = StdIn.readLine("Start cards: ")
 
   // get input and process
-  var input = "4cKs4h8s7s Ad4s Ac4d As9s KhKd 5d6d";
-  val emulateThreeOfKind = "AcAs4h8s7s Ad4s Ac4d As9s KhKd 5d6d";
-  val emulateFlush = "AcAs4h8c7c Ad4s Ac4c As9c KhKd 5c6c";
-  val emulateFourOfKind = "KcKs4h8c7c Ad4s Ac4c As9c KhKd 5c6c";
+  var input = "4cKs4h8s7s Ad4s Ac4d As9s KhKd 5d6d"
+  val emulateThreeOfKind = "AcAs4h8s7s Ad4s Ac4d As9s KhKd 5d6d"
+  val emulateFlush = "AcAs4h8c7c Ad4s Ac4c As9c KhKd 5c6c"
+  val emulateFourOfKind = "KcKs4h8c7c Ad4s Ac4c As9c KhKd 5c6c"
   val emulateStraight = "2c3s4h5c7c AdKs Ac4c As9c KhKd 5c6c"
+  val emulateRoyalFlush = "AcKcQc5c7c JcTc Ac4c As9c KhKd 5c6c"
+  val emulateStraightFlush = "9cKcQc5c7c JcTc Ac4c As9c KhKd 5c6c"
+  val emulateException = "9cKcQc5c7c dddd"
 
-  input = emulateStraight
+  input = emulateException
 
   val inputArray = input.split(" ")
 
@@ -28,21 +32,25 @@ object Hand extends App {
   println(s"board: ${boardCards}")
 
   val hands = inputArray.tail
-  for (hand <- hands) checkStrength(boardCards + hand)
 
+  try {
+    for (hand <- hands) checkStrength(boardCards + hand)
+  } catch {
+    case e: Exception => println(e)
+  }
 
   //  val result = checkStrength("")
   //  println(result)
 
-
   def checkStrength(input: String): String = {
     if (input.length != 14) {
-      error("Wrong input in checkStrength()")
-      return null
+      error("Cards were not identified. Please, check if all the cards have been given.")
     }
 
-    println("findBestCards...");
-    findTheBestCombination(input)
+    print("findBestCards...")
+    val bestCombination = findTheBestCombination(input)
+    println(bestCombination)
+    println(getCombinationScore(bestCombination))
 
     //    println(s"checking Strength of string: ${input}")
 
@@ -74,10 +82,18 @@ object Hand extends App {
 
   /*
   Function checks a string for the four of kind: 4 cards the same value
-   */
+  */
   def checkFourOfKind(x: String): Boolean = {
     val list = parseCards(x).groupBy(identity).mapValues(_.size)
     list.values.exists(_ == 4)
+  }
+
+  /*
+  Function checks a string for the three of kind: 3 cards the same value
+  */
+  def checkThreeOfKind(x: String): Boolean = {
+    val list = parseCards(x).groupBy(identity).mapValues(_.size)
+    list.values.exists(_ == 3)
   }
 
   /*
@@ -86,21 +102,41 @@ object Hand extends App {
    */
   def parseCards(input: String): IndexedSeq[Int] = {
     val cards = for (i <- 0 until input.length if i % 2 == 0) yield input.charAt(i).toChar
-    cards.map {
+    val replacedCards = cards.map {
       case 'A' => CARD_A;
       case 'K' => CARD_K;
       case 'Q' => CARD_Q;
       case 'J' => CARD_J;
-      case x => x.asDigit
+      case 'T' => CARD_T;
+      case '2' => 2;
+      case '3' => 3;
+      case '4' => 4;
+      case '5' => 5;
+      case '6' => 6;
+      case '7' => 7;
+      case '8' => 8;
+      case '9' => 9;
+      case x => 0
     }.sorted
+    if (replacedCards.contains(0)) error("Wrong card value in string: " + input)
+    replacedCards
   }
 
   def parseSuits(input: String): IndexedSeq[Char] = {
-    for (i <- 0 until input.length if i % 2 == 1) yield input.charAt(i)
+    val suits = for (i <- 0 until input.length if i % 2 == 1) yield input.charAt(i)
+    // check if suits have only allowed values (c s d h)
+    for (suit <- suits) suit match {
+      case 'c' => ;
+      case 's' => ;
+      case 'd' => ;
+      case 'h' => ;
+      case x => error("Wrong suit: " + x);
+    }
+    suits
   }
 
   def error(msg: String) {
-    println(msg)
+    throw new Exception(msg)
   }
 
   /*
@@ -124,7 +160,7 @@ object Hand extends App {
       val combinationScore = getCombinationScore(combinationString)
 
       // compare next combination with previously saved best combination
-      if (combinationScore > bestCombinationScore) {
+      if (combinationScore > bestCombinationScore || bestCombination == null) {
         bestCombination = combinationString
         bestCombinationScore = combinationScore
       }
@@ -132,6 +168,9 @@ object Hand extends App {
     bestCombination
   }
 
+  /*
+  Method takes an array of cards and check it for a straight
+   */
   def isStraight(cards: IndexedSeq[Int]): Boolean = {
     // if we have an Ace then we also should check the Ace as first card of straight (before 2)
     if (cards.contains(13)) {
@@ -144,18 +183,32 @@ object Hand extends App {
     false
   }
 
+  /*
+  I developed an integer equivalent of each of combination,
+  as it is a way easier to sort winners
+   */
   def getCombinationScore(cardsString: String): Int = {
+    if (cardsString.length != 10) error("Wrong input string: " + cardsString)
+
     val cards = parseCards(cardsString)
-    println(s"Original: ${cards}")
+    //    println(s"Original: ${cards}")
 
-    if (isStraight(cards)) println("------FOUND-------")
+    // check for all types of Straight
+    if (isStraight(cards)) {
+      if (checkFlush(cardsString) && cards(0) == 10) return 1000 // Royal Flush
+      if (checkFlush(cardsString)) return 900 // Straight Flush
+      return 550 // just Straight
+    }
 
-    if (isStraight(cards))
-      return 600
-    else if (checkFlush(cardsString))
-      return 1000
-    else if (checkFourOfKind(cardsString))
-      return 900
+
+    if (checkThreeOfKind(cardsString)) return 500
+
+
+    if (checkFlush(cardsString)) return 600 // just Flush
+
+
+    if (checkFourOfKind(cardsString)) return 800 // four of kind
+
     0
   }
 
