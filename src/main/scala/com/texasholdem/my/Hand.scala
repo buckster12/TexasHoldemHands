@@ -4,43 +4,12 @@ import scala.util.Random
 import scala.io.StdIn
 
 object Hand extends App {
-  //  val ages = Seq(42, 75, 29, 64)
-  //  println(s"The oldest person is ${ages.max}")
-  //
-  //  val Cards = Map(
-  //    "Two" -> 2,
-  //    "Three" -> 3,
-  //    "For" -> 4,
-  //    "Five" -> 5,
-  //    "Six" -> 6,
-  //    "Six" -> 7,
-  //    "Six" -> 8,
-  //    "Six" -> 9,
-  //
-  //    "Ten" -> 10,
-  //    "Jack" -> 11,
-  //    "Queen" -> 12,
-  //    "King" -> 13,
-  //    "Ace" -> 14,
-  //  );
-  //
-  //  val Suits = Map(
-  //    "Spades" -> 0,
-  //    "Hearts" -> 1,
-  //    "Diamonds" -> 2,
-  //    "Clubs" -> 3
-  //  );
-  //  val SuitsSet = Set("Spades", "Hearts", "Diamonds", "Clubs")
 
-  //
-  //  val Suits = Map(
-  //    "Spades" -> 0,
-  //    "Hearts" -> 1,
-  //    "Diamonds" -> 2,
-  //    "Clubs" -> 3
-  //  );
-
-  //  val SuitsSet = Set("Spades", "Hearts", "Diamonds", "Clubs")
+  // Init constants to convert J,Q,K,A to Integer equivalent
+  val CARD_J = 10
+  val CARD_Q = 11
+  val CARD_K = 12
+  val CARD_A = 13
 
   //  val input = StdIn.readLine("Start cards: ")
 
@@ -49,8 +18,9 @@ object Hand extends App {
   val emulateThreeOfKind = "AcAs4h8s7s Ad4s Ac4d As9s KhKd 5d6d";
   val emulateFlush = "AcAs4h8c7c Ad4s Ac4c As9c KhKd 5c6c";
   val emulateFourOfKind = "KcKs4h8c7c Ad4s Ac4c As9c KhKd 5c6c";
+  val emulateStraight = "2c3s4h5c7c AdKs Ac4c As9c KhKd 5c6c"
 
-  input = emulateFourOfKind
+  input = emulateStraight
 
   val inputArray = input.split(" ")
 
@@ -114,8 +84,15 @@ object Hand extends App {
   Method gets all cards from a string, for example from a string: KcAc4cJc9c
   it returns: K A 4 J 9
    */
-  def parseCards(input: String): IndexedSeq[Char] = {
-    for (i <- 0 until input.length if i % 2 == 0) yield input.charAt(i)
+  def parseCards(input: String): IndexedSeq[Int] = {
+    val cards = for (i <- 0 until input.length if i % 2 == 0) yield input.charAt(i).toChar
+    cards.map {
+      case 'A' => CARD_A;
+      case 'K' => CARD_K;
+      case 'Q' => CARD_Q;
+      case 'J' => CARD_J;
+      case x => x.asDigit
+    }.sorted
   }
 
   def parseSuits(input: String): IndexedSeq[Char] = {
@@ -147,7 +124,7 @@ object Hand extends App {
       val combinationScore = getCombinationScore(combinationString)
 
       // compare next combination with previously saved best combination
-      if (combinationScore > bestCombination) {
+      if (combinationScore > bestCombinationScore) {
         bestCombination = combinationString
         bestCombinationScore = combinationScore
       }
@@ -155,7 +132,30 @@ object Hand extends App {
     bestCombination
   }
 
+  def isStraight(cards: IndexedSeq[Int]): Boolean = {
+    // if we have an Ace then we also should check the Ace as first card of straight (before 2)
+    if (cards.contains(13)) {
+      val secondVariant = cards.updated(4, 1).sorted
+      if (secondVariant(0).to((secondVariant(0)) + 4).toVector == secondVariant)
+        return true
+    }
+    if (cards(0).to((cards(0)) + 4).toVector == cards)
+      return true
+    false
+  }
+
   def getCombinationScore(cardsString: String): Int = {
+    val cards = parseCards(cardsString)
+    println(s"Original: ${cards}")
+
+    if (isStraight(cards)) println("------FOUND-------")
+
+    if (isStraight(cards))
+      return 600
+    else if (checkFlush(cardsString))
+      return 1000
+    else if (checkFourOfKind(cardsString))
+      return 900
     0
   }
 
