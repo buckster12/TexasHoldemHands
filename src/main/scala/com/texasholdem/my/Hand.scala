@@ -12,6 +12,17 @@ object Hand extends App {
   val CARD_K = 13
   val CARD_A = 14
 
+  // Points of combinations to manage sorting of winners
+  val ROYAL_FLUSH = 1000
+  val STRAIGHT_FLUSH = 900
+  val FOUR_OF_KIND = 800
+  val FULL_HOUSE = 700
+  val FLUSH = 600
+  val STRAIGHT = 550
+  val THREE_OF_KIND = 500
+  val TWO_PAIRS = 400
+  val PAIR = 200
+
   //  val input = StdIn.readLine("Start cards: ")
 
   // get input and process
@@ -24,7 +35,7 @@ object Hand extends App {
   val emulateStraightFlush = "9cKcQc5c7c JcTc Ac4c As9c KhKd 5c6c"
   val emulateException = "9cKcQc5c7c dddd"
 
-  input = emulateException
+  //  input = emulateFourOfKind
 
   val inputArray = input.split(" ")
 
@@ -34,23 +45,35 @@ object Hand extends App {
   val hands = inputArray.tail
 
   try {
-    for (hand <- hands) checkStrength(boardCards + hand)
+    val winners = for (hand <- hands) yield (hand.toString, checkStrength(boardCards + hand).toString)
+    printResult(winners.toList.sortBy(_._2))
   } catch {
     case e: Exception => println(e)
   }
 
-  //  val result = checkStrength("")
-  //  println(result)
+  def printResult(winnersSorted: List[(String, String)]): Unit = {
+    println(s"winners=${winnersSorted}")
+    for (i <- 1 until winnersSorted.length + 1) {
+      print(winnersSorted(i - 1)._1)
+      if (i == winnersSorted.length) return
+      if (winnersSorted(i - 1)._2 == winnersSorted(i)._2) print("=") else print(" ")
+    }
+  }
 
-  def checkStrength(input: String): String = {
+  def checkStrength(input: String): Int = {
     if (input.length != 14) {
       error("Cards were not identified. Please, check if all the cards have been given.")
     }
 
-    print("findBestCards...")
+    println("findBestCards of: " + input)
     val bestCombination = findTheBestCombination(input)
+    val bestCombinationScore = getCombinationScore(bestCombination)
+
     println(bestCombination)
-    println(getCombinationScore(bestCombination))
+    //    println()
+
+    return bestCombinationScore
+
 
     //    println(s"checking Strength of string: ${input}")
 
@@ -68,8 +91,8 @@ object Hand extends App {
     }
      */
 
-    println("------")
-    null
+    //    println("------")
+    //    null
   }
 
   /*
@@ -81,26 +104,10 @@ object Hand extends App {
   }
 
   /*
-  Function checks a string for the four of kind: 4 cards the same value
-  */
-  def checkFourOfKind(x: String): Boolean = {
-    val list = parseCards(x).groupBy(identity).mapValues(_.size)
-    list.values.exists(_ == 4)
-  }
-
-  /*
-  Function checks a string for the three of kind: 3 cards the same value
-  */
-  def checkThreeOfKind(x: String): Boolean = {
-    val list = parseCards(x).groupBy(identity).mapValues(_.size)
-    list.values.exists(_ == 3)
-  }
-
-  /*
   Method gets all cards from a string, for example from a string: KcAc4cJc9c
-  it returns: K A 4 J 9
+  it returns: 4 9 11 13 14
    */
-  def parseCards(input: String): IndexedSeq[Int] = {
+  def getIntegerListOfSortedCards(input: String): IndexedSeq[Int] = {
     val cards = for (i <- 0 until input.length if i % 2 == 0) yield input.charAt(i).toChar
     val replacedCards = cards.map {
       case 'A' => CARD_A;
@@ -157,6 +164,8 @@ object Hand extends App {
     // loop all combinations and search for the best one by its score
     for (comb <- uniqueCombinations) {
       val combinationString = comb.mkString
+      //      println(s"look at combination: $combinationString")
+
       val combinationScore = getCombinationScore(combinationString)
 
       // compare next combination with previously saved best combination
@@ -168,12 +177,27 @@ object Hand extends App {
     bestCombination
   }
 
+  def getPair(sortedArray: IndexedSeq[Int], count: Int = 2): IndexedSeq[Int] = {
+    var resultArray = IndexedSeq.empty[Int]
+    // set the first card into an array
+    resultArray = resultArray :+ sortedArray(0)
+    // and loop all the elements to find a pair
+    for (i <- sortedArray.tail) {
+      if (i != resultArray.last) {
+        resultArray = resultArray.empty
+      }
+      resultArray = resultArray :+ i
+      if (resultArray.length == count) return resultArray
+    }
+    resultArray.empty
+  }
+
   /*
   Method takes an array of cards and check it for a straight
    */
   def isStraight(cards: IndexedSeq[Int]): Boolean = {
     // if we have an Ace then we also should check the Ace as first card of straight (before 2)
-    if (cards.contains(13)) {
+    if (cards.contains(CARD_A)) {
       val secondVariant = cards.updated(4, 1).sorted
       if (secondVariant(0).to((secondVariant(0)) + 4).toVector == secondVariant)
         return true
@@ -185,52 +209,52 @@ object Hand extends App {
 
   /*
   I developed an integer equivalent of each of combination,
-  as it is a way easier to sort winners
+  as it is a way easier to sort winners/
    */
   def getCombinationScore(cardsString: String): Int = {
     if (cardsString.length != 10) error("Wrong input string: " + cardsString)
 
-    val cards = parseCards(cardsString)
-    //    println(s"Original: ${cards}")
+    val cards = getIntegerListOfSortedCards(cardsString)
+    if (cardsString == "4cKs4hKhKd") println(s"Original: ${cards}")
 
     // check for all types of Straight
     if (isStraight(cards)) {
-      if (checkFlush(cardsString) && cards(0) == 10) return 1000 // Royal Flush
-      if (checkFlush(cardsString)) return 900 // Straight Flush
-      return 550 // just Straight
+      if (checkFlush(cardsString) && cards(0) == CARD_T) return ROYAL_FLUSH // Royal Flush
+      if (checkFlush(cardsString)) return STRAIGHT_FLUSH + cards(4) // Straight Flush and the highest card's rank
+      return STRAIGHT + cards(4) // just Straight + the highest card's rank
     }
 
+    // just Flush + the highest card's rank
+    // we need the highest card's rank to get the higher flush if there are two on hands
+    if (checkFlush(cardsString)) return FLUSH + cards(4)
 
-    if (checkThreeOfKind(cardsString)) return 500
+    // four of Kind
+    val checkFourOfKind = getPair(cards, 4)
+    if (checkFourOfKind.nonEmpty) {
+      return FOUR_OF_KIND + cards.diff(checkFourOfKind)(0)
+    }
 
+    // Set of three
+    // Full house
+    val threeOfKind = getPair(cards, 3)
+    if (threeOfKind.nonEmpty) {
+      val leftCards = cards.diff(threeOfKind)
+      println(s"found set: $threeOfKind")
+      println(s"left cards: $leftCards")
+      //      error("")
+      val checkPair = getPair(leftCards)
+      if (checkPair.isEmpty) {
+        return THREE_OF_KIND + threeOfKind(0) + leftCards.last // set of three + card of set + high card
+      } else {
+        return FULL_HOUSE + cards(0) // Full house + high card
+      }
+    }
 
-    if (checkFlush(cardsString)) return 600 // just Flush
-
-
-    if (checkFourOfKind(cardsString)) return 800 // four of kind
+    //    println("get pair...")
+    //    var foundPair = getPair(cards, 2)
+    //    println(foundPair)
 
     0
-  }
-
-  // I think I may be useful for kicker but not sure yet
-  def getTheHighestCard(handCards: String): String = {
-    val cards = parseCards(handCards)
-    println(cards)
-    for (card <- cards) println(s"${card} = ${getScoreOfCard(card.toString)}")
-    ""
-  }
-
-  /*
-  Method return a card's integer value for comparing possibility
-   */
-  def getScoreOfCard(card: String): Int = {
-    var value = 0
-    if (card == "J") value = 11
-    else if (card == "Q") value = 13
-    else if (card == "K") value = 14
-    else if (card == "A") value = 15
-    else value = card.toInt
-    value
   }
 
 }
