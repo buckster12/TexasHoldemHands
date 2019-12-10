@@ -1,6 +1,5 @@
 package com.texasholdem.my
 
-import scala.util.Random
 import scala.io.StdIn
 
 object Hand extends App {
@@ -23,10 +22,10 @@ object Hand extends App {
   val TWO_PAIRS = 400
   val PAIR = 200
 
-  //  val input = StdIn.readLine("Start cards: ")
+  //  val input = StdIn.readLine("\nStart cards: ")
 
   // get input and process
-  var input = "4cKs4h8s7s Ad4s Ac4d As9s KhKd 5d6d"
+  //  var input = "4cKs4h8s7s Ad4s Ac4d As9s KhKd 5d6d"
   val emulateThreeOfKind = "AcAs4h8s7s Ad4s Ac4d As9s KhKd 5d6d"
   val emulateFlush = "AcAs4h8c7c Ad4s Ac4c As9c KhKd 5c6c"
   val emulateFourOfKind = "KcKs4h8c7c Ad4s Ac4c As9c KhKd 5c6c"
@@ -37,62 +36,70 @@ object Hand extends App {
 
   //  input = emulateFourOfKind
 
-  val inputArray = input.split(" ")
-
-  val boardCards = inputArray.head
-  println(s"board: ${boardCards}")
-
-  val hands = inputArray.tail
-
   try {
-    val winners = for (hand <- hands) yield (hand.toString, checkStrength(boardCards + hand).toString)
-    printResult(winners.toList.sortBy(_._2))
+    println("Input: ")
+    val in = Iterator.continually(io.StdIn.readLine).takeWhile(_.nonEmpty).toList
+    processLines(in)
   } catch {
-    case e: Exception => println(e)
+    case e: Exception => println("System error: " + e)
+    case e: Throwable => println("Error: " + e)
   }
 
+
+  /*
+  Takes a list of lies and parse them one by one
+   */
+  def processLines(lines: List[String]): Unit = {
+    println("Output: ")
+    for (line <- lines) {
+      prepareOutput(line)
+    }
+  }
+
+
+  /*
+  This functions takes one line, parse it and prints a result
+   */
+  def prepareOutput(input: String): Unit = {
+    val inputArray = input.split(" ")
+    val boardCards = inputArray.head
+    val hands = inputArray.tail
+
+    if (boardCards.length != 10) {
+      println("Wrong format of board cards.")
+    }
+    else
+      try {
+        val winners = for (hand <- hands) yield (hand.toString, checkStrength(boardCards + hand).toString)
+        printResult(winners.toList.sortBy(_._2))
+        println()
+      } catch {
+        case e: Exception => println(e.toString)
+        case unknown => println(unknown.toString)
+      }
+  }
+
+  /*
+  Prints sorted array in one line
+   */
   def printResult(winnersSorted: List[(String, String)]): Unit = {
-    println(s"winners=${winnersSorted}")
     for (i <- 1 until winnersSorted.length + 1) {
       print(winnersSorted(i - 1)._1)
       if (i == winnersSorted.length) return
       if (winnersSorted(i - 1)._2 == winnersSorted(i)._2) print("=") else print(" ")
     }
+    println("")
   }
 
+  /*
+  Takes a 7 cards line and check its best combination score
+   */
   def checkStrength(input: String): Int = {
     if (input.length != 14) {
       error("Cards were not identified. Please, check if all the cards have been given.")
     }
-
-    println("findBestCards of: " + input)
     val bestCombination = findTheBestCombination(input)
-    val bestCombinationScore = getCombinationScore(bestCombination)
-
-    println(bestCombination)
-    //    println()
-
-    return bestCombinationScore
-
-
-    //    println(s"checking Strength of string: ${input}")
-
-    //    val isFlash = checkFlush(input)
-    //    println("Flash: " + isFlash)
-
-    //    val isFourOfKind = checkFourOfKind(input)
-    //    println("FourOfKind: " + isFourOfKind)
-
-    /*
-    val cards = input.grouped(2).toList
-    for (card <- cards) {
-      println(s"Checking cards: ${card}")
-      checkFlush(card)
-    }
-     */
-
-    //    println("------")
-    //    null
+    getCombinationScore(bestCombination)
   }
 
   /*
@@ -215,7 +222,7 @@ object Hand extends App {
     if (cardsString.length != 10) error("Wrong input string: " + cardsString)
 
     val cards = getIntegerListOfSortedCards(cardsString)
-    if (cardsString == "4cKs4hKhKd") println(s"Original: ${cards}")
+    //    if (cardsString == "4cKs4hKhKd") println(s"Original: ${cards}")
 
     // check for all types of Straight
     if (isStraight(cards)) {
@@ -239,9 +246,6 @@ object Hand extends App {
     val threeOfKind = getPair(cards, 3)
     if (threeOfKind.nonEmpty) {
       val leftCards = cards.diff(threeOfKind)
-      println(s"found set: $threeOfKind")
-      println(s"left cards: $leftCards")
-      //      error("")
       val checkPair = getPair(leftCards)
       if (checkPair.isEmpty) {
         return THREE_OF_KIND + threeOfKind(0) + leftCards.last // set of three + card of set + high card
