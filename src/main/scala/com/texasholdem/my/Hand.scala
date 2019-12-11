@@ -58,7 +58,7 @@ object Hand extends App {
     //  def processLines(lines: List[String]): Unit = {
     println("Output: ")
     for (line <- lines) {
-      if (line.nonEmpty) prepareOutput(line)
+      if (line.nonEmpty) prepareOutput(line.trim)
     }
   }
 
