@@ -1,6 +1,8 @@
 package com.texasholdem.my
 
-import scala.io.StdIn
+import sun.misc.Signal
+import sun.misc.SignalHandler
+import scala.collection.mutable.ArrayBuffer
 
 object Hand extends App {
 
@@ -11,54 +13,57 @@ object Hand extends App {
   val CARD_K = 13
   val CARD_A = 14
 
-  // Points of combinations to manage sorting of winners
+  // Points of combinations to sort of winners
   val ROYAL_FLUSH = 1000
-  val STRAIGHT_FLUSH = 900
-  val FOUR_OF_KIND = 800
-  val FULL_HOUSE = 700
+  val STRAIGHT_FLUSH = 950
+  val FOUR_OF_KIND = 900
+  val FULL_HOUSE = 650
   val FLUSH = 600
   val STRAIGHT = 550
   val THREE_OF_KIND = 500
-  val TWO_PAIRS = 400
-  val PAIR = 200
+  val TWO_PAIRS = 200
+  val PAIR = 100
 
-  //  val input = StdIn.readLine("\nStart cards: ")
-
-  // get input and process
-  //  var input = "4cKs4h8s7s Ad4s Ac4d As9s KhKd 5d6d"
-  val emulateThreeOfKind = "AcAs4h8s7s Ad4s Ac4d As9s KhKd 5d6d"
-  val emulateFlush = "AcAs4h8c7c Ad4s Ac4c As9c KhKd 5c6c"
-  val emulateFourOfKind = "KcKs4h8c7c Ad4s Ac4c As9c KhKd 5c6c"
-  val emulateStraight = "2c3s4h5c7c AdKs Ac4c As9c KhKd 5c6c"
-  val emulateRoyalFlush = "AcKcQc5c7c JcTc Ac4c As9c KhKd 5c6c"
-  val emulateStraightFlush = "9cKcQc5c7c JcTc Ac4c As9c KhKd 5c6c"
-  val emulateException = "9cKcQc5c7c dddd"
-
-  //  input = emulateFourOfKind
-
-  try {
-    println("Input: ")
-    val in = Iterator.continually(io.StdIn.readLine).takeWhile(_.nonEmpty).toList
-    processLines(in)
-  } catch {
-    case e: Exception => println("System error: " + e)
-    case e: Throwable => println("Error: " + e)
-  }
-
+  var inputLinesBuffer = ArrayBuffer[String]()
+  val DEBUG = false
 
   /*
-  Takes a list of lies and parse them one by one
+  EOF handler
    */
-  def processLines(lines: List[String]): Unit = {
+  Signal.handle(new Signal("INT"), new SignalHandler {
+    def handle(sig: Signal): Unit = {
+      processLines(inputLinesBuffer)
+      System.exit(0)
+    }
+  })
+
+  println("Input: ")
+  // read lines and wait for an empty string (double enter) to start program
+  //  val inputLines = Iterator.continually(io.StdIn.readLine).takeWhile(_.nonEmpty).toList
+  //  inputLinesBuffer += Iterator.continually(io.StdIn.readLine).takeWhile(_.nonEmpty)
+
+  try {
+    do {
+      inputLinesBuffer += io.StdIn.readLine("")
+    } while (true)
+  } catch {
+    case e: Exception => println("error: " + e)
+    case e: Throwable => println("error: " + e)
+  }
+
+  /*
+  Gets a list of lies and parse them one by one
+   */
+  def processLines(lines: ArrayBuffer[String]): Unit = {
+    //  def processLines(lines: List[String]): Unit = {
     println("Output: ")
     for (line <- lines) {
-      prepareOutput(line)
+      if (line.nonEmpty) prepareOutput(line)
     }
   }
 
-
   /*
-  This functions takes one line, parse it and prints a result
+  This functions gets one line, parse it and prints a result
    */
   def prepareOutput(input: String): Unit = {
     val inputArray = input.split(" ")
@@ -72,10 +77,14 @@ object Hand extends App {
       try {
         val winners = for (hand <- hands) yield (hand.toString, checkStrength(boardCards + hand).toString)
         printResult(winners.toList.sortBy(_._2))
-        println()
+        // DEBUG MODE
+        if (DEBUG)
+          println(winners.toList)
+
+        println("")
       } catch {
-        case e: Exception => println(e.toString)
-        case unknown => println(unknown.toString)
+        case e: Exception => println("Error: " + e.toString)
+        case unknown: Throwable => println("Error: " + unknown.toString)
       }
   }
 
@@ -114,7 +123,7 @@ object Hand extends App {
   Method gets all cards from a string, for example from a string: KcAc4cJc9c
   it returns: 4 9 11 13 14
    */
-  def getIntegerListOfSortedCards(input: String): IndexedSeq[Int] = {
+  def getIntegerListOfSortedCards(input: String): List[Int] = {
     val cards = for (i <- 0 until input.length if i % 2 == 0) yield input.charAt(i).toChar
     val replacedCards = cards.map {
       case 'A' => CARD_A;
@@ -131,12 +140,12 @@ object Hand extends App {
       case '8' => 8;
       case '9' => 9;
       case x => 0
-    }.sorted
+    }.sorted.toList
     if (replacedCards.contains(0)) error("Wrong card value in string: " + input)
     replacedCards
   }
 
-  def parseSuits(input: String): IndexedSeq[Char] = {
+  def parseSuits(input: String): List[Char] = {
     val suits = for (i <- 0 until input.length if i % 2 == 1) yield input.charAt(i)
     // check if suits have only allowed values (c s d h)
     for (suit <- suits) suit match {
@@ -146,7 +155,7 @@ object Hand extends App {
       case 'h' => ;
       case x => error("Wrong suit: " + x);
     }
-    suits
+    suits.toList
   }
 
   def error(msg: String) {
@@ -171,8 +180,6 @@ object Hand extends App {
     // loop all combinations and search for the best one by its score
     for (comb <- uniqueCombinations) {
       val combinationString = comb.mkString
-      //      println(s"look at combination: $combinationString")
-
       val combinationScore = getCombinationScore(combinationString)
 
       // compare next combination with previously saved best combination
@@ -184,8 +191,8 @@ object Hand extends App {
     bestCombination
   }
 
-  def getPair(sortedArray: IndexedSeq[Int], count: Int = 2): IndexedSeq[Int] = {
-    var resultArray = IndexedSeq.empty[Int]
+  def getPair(sortedArray: List[Int], count: Int = 2): List[Int] = {
+    var resultArray = List.empty[Int]
     // set the first card into an array
     resultArray = resultArray :+ sortedArray(0)
     // and loop all the elements to find a pair
@@ -194,22 +201,22 @@ object Hand extends App {
         resultArray = resultArray.empty
       }
       resultArray = resultArray :+ i
-      if (resultArray.length == count) return resultArray
+      if (resultArray.length == count) return resultArray.toList
     }
-    resultArray.empty
+    resultArray.empty.toList
   }
 
   /*
   Method takes an array of cards and check it for a straight
    */
-  def isStraight(cards: IndexedSeq[Int]): Boolean = {
+  def isStraight(cards: List[Int]): Boolean = {
     // if we have an Ace then we also should check the Ace as first card of straight (before 2)
     if (cards.contains(CARD_A)) {
       val secondVariant = cards.updated(4, 1).sorted
-      if (secondVariant(0).to((secondVariant(0)) + 4).toVector == secondVariant)
+      if (secondVariant.head.to(secondVariant.head + 4).toList == secondVariant)
         return true
     }
-    if (cards(0).to((cards(0)) + 4).toVector == cards)
+    if (cards.head.to(cards.head + 4).toList == cards)
       return true
     false
   }
@@ -226,19 +233,19 @@ object Hand extends App {
 
     // check for all types of Straight
     if (isStraight(cards)) {
-      if (checkFlush(cardsString) && cards(0) == CARD_T) return ROYAL_FLUSH // Royal Flush
-      if (checkFlush(cardsString)) return STRAIGHT_FLUSH + cards(4) // Straight Flush and the highest card's rank
+      if (checkFlush(cardsString) && cards.head == CARD_T) return ROYAL_FLUSH // Royal Flush
+      if (checkFlush(cardsString)) return STRAIGHT_FLUSH + cards.last // Straight Flush and the highest card's rank
       return STRAIGHT + cards(4) // just Straight + the highest card's rank
     }
 
     // just Flush + the highest card's rank
     // we need the highest card's rank to get the higher flush if there are two on hands
-    if (checkFlush(cardsString)) return FLUSH + cards(4)
+    if (checkFlush(cardsString)) return FLUSH + cards.last
 
     // four of Kind
     val checkFourOfKind = getPair(cards, 4)
     if (checkFourOfKind.nonEmpty) {
-      return FOUR_OF_KIND + cards.diff(checkFourOfKind)(0)
+      return FOUR_OF_KIND + cards.diff(checkFourOfKind).head
     }
 
     // Set of three
@@ -248,17 +255,34 @@ object Hand extends App {
       val leftCards = cards.diff(threeOfKind)
       val checkPair = getPair(leftCards)
       if (checkPair.isEmpty) {
-        return THREE_OF_KIND + threeOfKind(0) + leftCards.last // set of three + card of set + high card
+        return THREE_OF_KIND + threeOfKind.head + leftCards.last // set of three + card of set + high card
       } else {
-        return FULL_HOUSE + cards(0) // Full house + high card
+        return FULL_HOUSE +
+          Math.pow(threeOfKind.head, 2).toInt + // we need pow() to give extra bonus to set pair
+          checkPair.head +
+          cards.head // Full house + high card
       }
     }
 
-    //    println("get pair...")
-    //    var foundPair = getPair(cards, 2)
-    //    println(foundPair)
+    // just pairs
+    val firstPair = getPair(cards, 2)
+    if (firstPair.nonEmpty) {
+      val leftCardsOfPair = cards.diff(firstPair)
+      val secondPair = getPair(leftCardsOfPair, 2)
+      if (secondPair.nonEmpty) {
+        // return point of: two pairs + card of 1st pair + card of 2nd pair + high card
+        return TWO_PAIRS +
+          firstPair.head +
+          Math.pow(secondPair.head, 2).toInt + // here we give an extra bonus of higher pair
+          // to prevent situation when A and 2 pair will be lower than K and Q
+          leftCardsOfPair.diff(secondPair).head
 
-    0
+      } else
+        return PAIR + firstPair.head + leftCardsOfPair.last
+    }
+
+    // or just return the highest card
+    cards.last
   }
 
 }
